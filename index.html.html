@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Secado en vivo — Planta Piloto UNCAUS</title>
+<style>
+  :root{
+    --void-1:#060910; --void-2:#0C1522;
+    --glass:rgba(255,255,255,.045); --edge:rgba(170,215,235,.14);
+    --signal:#4DD9E8; --signal-dim:#2E8E9B;
+    --lime:#5CF2A0; --amber:#FFD24A; --violet:#B884FF; --alert:#FF6B5E;
+    --text:#E6F1F6; --muted:#8BA3B2; --faint:#5D7484; --r:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(900px 500px at 10% -10%, #163449 0%, transparent 58%),
+      radial-gradient(760px 460px at 94% 6%, #1B2C4A 0%, transparent 55%),
+      linear-gradient(170deg, var(--void-2) 0%, var(--void-1) 68%, #04070C 100%);
+    background-attachment:fixed;
+    color:var(--text);
+    font-family:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:15px;line-height:1.5;padding:16px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+  .glass{background:var(--glass);border:1px solid var(--edge);border-radius:var(--r);
+    backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);
+    box-shadow:0 8px 28px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06)}
+
+  header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  header h1{font-size:17px;font-weight:600;margin:0;letter-spacing:-.01em;
+    background:linear-gradient(92deg,#FFF 0%,var(--signal) 140%);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .badge{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+    padding:3px 10px;border-radius:99px;border:1px solid}
+  .badge.curso{color:var(--lime);border-color:rgba(92,242,160,.5);
+    background:rgba(92,242,160,.12);box-shadow:0 0 14px rgba(92,242,160,.25)}
+  .badge.fin{color:var(--muted);border-color:var(--edge);background:rgba(255,255,255,.04)}
+  .badge.sin{color:var(--amber);border-color:rgba(255,210,74,.45);background:rgba(255,210,74,.1)}
+
+  .top{display:grid;grid-template-columns:230px 1fr;gap:14px;align-items:stretch}
+  @media (max-width:760px){.top{grid-template-columns:1fr}}
+
+  .lcd{border-radius:var(--r);padding:16px 18px 12px;
+    background:linear-gradient(165deg, rgba(20,44,58,.85), rgba(9,20,29,.92));
+    border:1px solid rgba(77,217,232,.16);display:flex;flex-direction:column;justify-content:center}
+  .lcd .big{display:flex;align-items:baseline;justify-content:flex-end;gap:6px;
+    font-size:42px;font-weight:300;line-height:1.02;letter-spacing:-.02em;
+    color:#CFF6FB;text-shadow:0 0 22px rgba(77,217,232,.45)}
+  .lcd .big .u{font-size:17px;font-weight:400;color:var(--signal-dim);text-shadow:none}
+  .lcd .strip{display:flex;justify-content:space-between;font-size:11px;color:var(--faint);
+    border-top:1px solid rgba(77,217,232,.12);margin-top:10px;padding-top:7px}
+  .dot{display:inline-block;width:6px;height:6px;border-radius:50%;
+    background:var(--faint);margin-right:6px;vertical-align:middle}
+  .dot.viva{background:var(--lime);box-shadow:0 0 8px var(--lime)}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  @media (max-width:760px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpis > div{padding:11px 13px;display:flex;flex-direction:column;justify-content:center}
+  .kpis dt{font-size:10.5px;color:var(--faint);margin:0;letter-spacing:.03em}
+  .kpis dd{margin:3px 0 0;font-size:19px;font-weight:500}
+  .kpis dd.c{color:var(--signal)} .kpis dd.a{color:var(--amber)} .kpis dd.l{color:var(--lime)}
+
+  .tabs{display:flex;gap:6px;margin:14px 0 10px;flex-wrap:wrap}
+  .tabs button{font:inherit;font-size:13px;font-weight:500;padding:6px 13px;cursor:pointer;
+    color:var(--text);background:rgba(255,255,255,.07);
+    border:1px solid rgba(170,215,235,.28);border-radius:7px;transition:all .15s}
+  .tabs button:hover{background:rgba(255,255,255,.12)}
+  .tabs button:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(77,217,232,.34)}
+  #tPeso[aria-pressed="true"]{background:linear-gradient(170deg,rgba(77,217,232,.3),rgba(77,217,232,.1));
+    border-color:var(--signal);color:#CFF6FB;font-weight:600;box-shadow:0 0 16px rgba(77,217,232,.33)}
+  #tPerd[aria-pressed="true"]{background:linear-gradient(170deg,rgba(255,210,74,.3),rgba(255,210,74,.1));
+    border-color:var(--amber);color:#FFF3CF;font-weight:600;box-shadow:0 0 16px rgba(255,210,74,.3)}
+  #tX[aria-pressed="true"]{background:linear-gradient(170deg,rgba(92,242,160,.3),rgba(92,242,160,.1));
+    border-color:var(--lime);color:#D8FFEB;font-weight:600;box-shadow:0 0 16px rgba(92,242,160,.3)}
+
+  .chartbox{padding:4px}
+  canvas{display:block;width:100%;border-radius:7px}
+
+  .ficha{margin-top:14px;padding:13px 15px}
+  .ficha h2{font-size:11px;font-weight:600;color:var(--signal);margin:0 0 10px;
+    letter-spacing:.05em;text-transform:uppercase}
+  .campos{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px 16px}
+  .campos div{min-width:0}
+  .campos dt{font-size:10.5px;color:var(--faint);margin:0}
+  .campos dd{margin:1px 0 0;font-size:13.5px;color:var(--text);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  footer{margin-top:14px;font-size:11.5px;color:var(--faint);
+    display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .aviso{margin-top:14px;padding:22px 18px;text-align:center;color:var(--muted);font-size:13.5px}
+  .aviso strong{display:block;color:var(--text);font-size:15px;margin-bottom:5px;font-weight:600}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Secado en vivo</h1>
+  <span id="badge" class="badge sin">conectando</span>
+</header>
+
+<div id="cuerpo" style="display:none">
+  <div class="top">
+    <div class="glass lcd">
+      <div class="big"><span id="peso" class="num">—</span><span class="u">g</span></div>
+      <div class="strip">
+        <span><span id="dot" class="dot"></span><span id="ident">—</span></span>
+        <span id="transcurrido" class="num">—</span>
+      </div>
+    </div>
+    <dl class="kpis">
+      <div class="glass"><dt>Masa inicial</dt><dd id="kM0" class="num">—</dd></div>
+      <div class="glass"><dt>Pérdida</dt><dd id="kP" class="num a">—</dd></div>
+      <div class="glass"><dt>X actual (b.s.)</dt><dd id="kX" class="num l">—</dd></div>
+      <div class="glass"><dt>Registros</dt><dd id="kN" class="num c">—</dd></div>
+    </dl>
+  </div>
+
+  <div class="tabs" role="group" aria-label="Variable del gráfico">
+    <button id="tPeso" aria-pressed="true">Peso</button>
+    <button id="tPerd" aria-pressed="false">Pérdida</button>
+    <button id="tX" aria-pressed="false">Humedad b.s.</button>
+  </div>
+
+  <div class="glass chartbox"><canvas id="chart" height="320"></canvas></div>
+
+  <div class="glass ficha">
+    <h2>Condiciones del ensayo</h2>
+    <dl class="campos" id="campos"></dl>
+  </div>
+
+  <footer>
+    <span id="pie">—</span>
+    <span>Planta Piloto · UNCAUS</span>
+  </footer>
+</div>
+
+<div id="aviso" class="glass aviso"><strong>Buscando datos…</strong>Un momento.</div>
+
+<script>
+"use strict";
+
+const API = "https://script.google.com/macros/s/AKfycbxW7seGEQjg69dgCMTiaq_VP493NK4UNSpdAEtLvNdYBPcup1S_MDwc3LDRYA0dICVyhQ/exec";
+const CADENCIA = 30000;   // cada cuánto se piden datos
+
+let datos=null, modo="peso", timer=null, ultimaOk=null;
+const $ = id => document.getElementById(id);
+const nada = v => v===null || v===undefined || v==="";
+
+function avisar(titulo, texto){
+  $("cuerpo").style.display="none";
+  $("aviso").style.display="block";
+  $("aviso").innerHTML = "<strong>"+titulo+"</strong>"+texto;
+}
+
+async function traer(){
+  try{
+    const r = await fetch(API+"?ensayo=ultimo&_="+Date.now(), {cache:"no-store"});
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const d = await r.json();
+
+    if(d.vacio){ avisar("Sin ensayos publicados","Cuando arranque uno, aparece acá."); return; }
+    if(!d.ok) throw new Error(d.error||"respuesta inesperada");
+
+    datos = d; ultimaOk = Date.now();
+    $("aviso").style.display="none";
+    $("cuerpo").style.display="block";
+    pintar();
+  }catch(err){
+    if(!datos) avisar("No se pudo conectar","Reintentando…");
+    else {
+      $("badge").className="badge sin";
+      $("badge").textContent="sin actualizar";
+    }
+  }
+}
+
+function pintar(){
+  const f = datos.ficha || {}, p = datos.puntos || [];
+  const enCurso = String(f.estado||"").indexOf("curso") >= 0;
+
+  $("badge").className = "badge " + (enCurso ? "curso" : "fin");
+  $("badge").textContent = enCurso ? "en curso" : "finalizado";
+  $("dot").className = "dot" + (enCurso ? " viva" : "");
+  $("ident").textContent = f.identificacion || f.producto || "sin identificar";
+
+  if(p.length){
+    const u = p[p.length-1], p0 = p[0];
+    $("peso").textContent = Number(u.peso).toFixed(1);
+    $("kM0").textContent  = Number(p0.peso).toFixed(1)+" g";
+    $("kP").textContent   = Number(u.perdPct).toFixed(1)+" %";
+    $("kX").textContent   = nada(u.X) ? "—" : Number(u.X).toFixed(3);
+    $("kN").textContent   = p.length;
+    const m = Number(u.min);
+    $("transcurrido").textContent = m<60
+      ? m.toFixed(0)+" min"
+      : Math.floor(m/60)+" h "+String(Math.round(m%60)).padStart(2,"0")+" min";
+  }
+
+  const campos = [
+    ["Producto", f.producto], ["Variedad", f.variedad],
+    ["Geometría", f.geometria], ["Espesor", f.espesor_mm ? f.espesor_mm+" mm" : ""],
+    ["Pretratamiento", f.pretratamiento], ["T de consigna", f.temp_consigna_C ? f.temp_consigna_C+" °C" : ""],
+    ["Equipo", f.equipo], ["Bandeja", f.posicion_bandeja],
+    ["Carga", f.carga_g_m2 ? f.carga_g_m2+" g/m²" : ""],
+    ["Materia seca", f.materia_seca_pct ? f.materia_seca_pct+" %" : ""],
+    ["Inicio", f.inicio], ["Operador", f.operador]
+  ].filter(c => !nada(c[1]));
+
+  $("campos").innerHTML = campos.length
+    ? campos.map(c=>`<div><dt>${c[0]}</dt><dd>${String(c[1])}</dd></div>`).join("")
+    : '<div><dt>Ficha</dt><dd>sin cargar</dd></div>';
+
+  const cond = datos.condiciones || [];
+  const ult = cond.length ? cond[cond.length-1] : null;
+  const extra = ult && !nada(ult.tReal) ? " · última T de cámara "+ult.tReal+" °C" : "";
+  $("pie").textContent = "Actualizado "+new Date().toLocaleTimeString("es-AR",{hour12:false})+extra;
+
+  dibujar();
+}
+
+function dibujar(){
+  const cv=$("chart"), ctx=cv.getContext("2d");
+  const dpr=window.devicePixelRatio||1, w=cv.clientWidth, h=320;
+  if(cv.width!==w*dpr||cv.height!==h*dpr){ cv.width=w*dpr; cv.height=h*dpr; }
+  ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
+
+  const bg=ctx.createLinearGradient(0,0,0,h);
+  bg.addColorStop(0,"rgba(16,34,48,.5)"); bg.addColorStop(1,"rgba(8,16,24,.5)");
+  ctx.fillStyle=bg; ctx.fillRect(0,0,w,h);
+
+  const L=58,R=14,T=18,B=34, pw=w-L-R, ph=h-T-B;
+  const col = modo==="peso"?[77,217,232] : modo==="perd"?[255,210,74] : [92,242,160];
+  const rgb = a=>`rgba(${col[0]},${col[1]},${col[2]},${a})`;
+  const etiq = modo==="peso"?"Peso (g)" : modo==="perd"?"Pérdida (%)" : "X (kg agua / kg m.s.)";
+
+  const aviso = t=>{ ctx.fillStyle="#5D7484";
+    ctx.font="13px ui-sans-serif,system-ui,sans-serif";
+    ctx.textAlign="center"; ctx.fillText(t,w/2,h/2); };
+
+  const pts=(datos&&datos.puntos)||[];
+  const clave = modo==="peso"?"peso" : modo==="perd"?"perdPct" : "X";
+  const serie = pts.filter(p=>!nada(p[clave])).map(p=>({x:Number(p.min), y:Number(p[clave])}));
+
+  if(modo==="X" && !serie.length){ aviso("Este ensayo no tiene cargada la materia seca."); return; }
+  if(serie.length<2){ aviso("Esperando registros…"); return; }
+
+  const xMax=Math.max(...serie.map(d=>d.x))||1;
+  let yMin=Math.min(...serie.map(d=>d.y)), yMax=Math.max(...serie.map(d=>d.y));
+  if(yMin===yMax){ yMin-=1; yMax+=1; }
+  const pad=(yMax-yMin)*.08; yMin-=pad; yMax+=pad;
+  if(modo!=="peso" && yMin>0) yMin=0;
+
+  const X=v=>L+(v/xMax)*pw, Y=v=>T+ph-(v-yMin)/(yMax-yMin)*ph;
+  const dec = Math.abs(yMax-yMin)<5 ? (modo==="X"?3:2) : 1;
+
+  ctx.strokeStyle="rgba(170,215,235,.09)"; ctx.lineWidth=1;
+  ctx.font="11px ui-monospace,Consolas,monospace"; ctx.fillStyle="#5D7484";
+  for(let i=0;i<=4;i++){
+    const v=yMin+(yMax-yMin)*i/4, y=Math.round(Y(v))+.5;
+    ctx.beginPath(); ctx.moveTo(L,y); ctx.lineTo(L+pw,y); ctx.stroke();
+    ctx.textAlign="right"; ctx.textBaseline="middle"; ctx.fillText(v.toFixed(dec), L-8, y);
+  }
+  for(let i=0;i<=5;i++){
+    const v=xMax*i/5, x=Math.round(X(v))+.5;
+    ctx.beginPath(); ctx.moveTo(x,T); ctx.lineTo(x,T+ph); ctx.stroke();
+    ctx.textAlign="center"; ctx.textBaseline="top"; ctx.fillText(v.toFixed(v<10?1:0), x, T+ph+8);
+  }
+
+  ctx.strokeStyle="rgba(170,215,235,.3)";
+  ctx.beginPath(); ctx.moveTo(L+.5,T); ctx.lineTo(L+.5,T+ph+.5); ctx.lineTo(L+pw,T+ph+.5); ctx.stroke();
+
+  ctx.fillStyle="#8BA3B2"; ctx.font="600 12px ui-sans-serif,system-ui,sans-serif";
+  ctx.textAlign="left"; ctx.textBaseline="bottom"; ctx.fillText(etiq,L,T-4);
+  ctx.textAlign="right"; ctx.fillText("Tiempo (min)",L+pw,h-6);
+
+  const area=ctx.createLinearGradient(0,T,0,T+ph);
+  area.addColorStop(0,rgb(.22)); area.addColorStop(1,rgb(0));
+  ctx.fillStyle=area; ctx.beginPath(); ctx.moveTo(X(serie[0].x),T+ph);
+  serie.forEach(d=>ctx.lineTo(X(d.x),Y(d.y)));
+  ctx.lineTo(X(serie[serie.length-1].x),T+ph); ctx.closePath(); ctx.fill();
+
+  ctx.save(); ctx.shadowColor=rgb(.6); ctx.shadowBlur=11;
+  ctx.strokeStyle=rgb(1); ctx.lineWidth=2; ctx.lineJoin="round"; ctx.lineCap="round";
+  ctx.beginPath();
+  serie.forEach((d,i)=>{ const x=X(d.x),y=Y(d.y); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+  ctx.stroke(); ctx.restore();
+
+  const u=serie[serie.length-1];
+  ctx.save(); ctx.shadowColor="rgba(92,242,160,.9)"; ctx.shadowBlur=14;
+  ctx.fillStyle="#5CF2A0"; ctx.beginPath();
+  ctx.arc(X(u.x),Y(u.y),4.2,0,Math.PI*2); ctx.fill(); ctx.restore();
+}
+
+function setModo(m){
+  modo=m;
+  $("tPeso").setAttribute("aria-pressed", m==="peso");
+  $("tPerd").setAttribute("aria-pressed", m==="perd");
+  $("tX").setAttribute("aria-pressed", m==="X");
+  dibujar();
+}
+$("tPeso").addEventListener("click",()=>setModo("peso"));
+$("tPerd").addEventListener("click",()=>setModo("perd"));
+$("tX").addEventListener("click",()=>setModo("X"));
+window.addEventListener("resize",dibujar);
+
+// se deja de consultar cuando la pestaña no está a la vista
+function ciclo(){
+  clearInterval(timer);
+  if(document.hidden) return;
+  traer();
+  timer=setInterval(traer,CADENCIA);
+}
+document.addEventListener("visibilitychange",ciclo);
+ciclo();
+</script>
+</body>
+</html>
