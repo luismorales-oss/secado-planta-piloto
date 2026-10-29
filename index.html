@@ -149,7 +149,8 @@
 
 const API = "https://script.google.com/macros/s/AKfycbxW7seGEQjg69dgCMTiaq_VP493NK4UNSpdAEtLvNdYBPcup1S_MDwc3LDRYA0dICVyhQ/exec";
 const CADENCIA = 30000;   // cada cuánto se piden datos
-const UMBRAL_MIN = 8;     // sin datos nuevos por más de esto, el ensayo se da por interrumpido
+const UMBRAL_MIN = 8;     // sin datos nuevos por más de esto, el registro se considera cortado
+const ABANDONO_MIN = 120; // pasado esto, deja de alarmar y se muestra como terminado
 
 let datos=null, modo="peso", timer=null, ultimaOk=null;
 const $ = id => document.getElementById(id);
@@ -210,9 +211,11 @@ function pintar(){
   const act = comoFecha(f.actualizado);
   const minSinDatos = act ? (Date.now() - act.getTime())/60000 : null;
 
-  // si quedó marcado en curso pero hace rato que no llega nada, el envío se cortó
-  const cortado = marcadoEnCurso && minSinDatos !== null && minSinDatos > UMBRAL_MIN;
-  const vivo = marcadoEnCurso && !cortado;
+  // sin datos recientes el registro se cortó; si ya pasaron horas, se lo da por terminado
+  const silencio = marcadoEnCurso && minSinDatos !== null && minSinDatos > UMBRAL_MIN;
+  const cortado  = silencio && minSinDatos <= ABANDONO_MIN;
+  const vencido  = silencio && minSinDatos > ABANDONO_MIN;
+  const vivo = marcadoEnCurso && !silencio;
 
   $("badge").className = "badge " + (vivo ? "curso" : cortado ? "corte" : "fin");
   $("badge").textContent = vivo ? "en curso"
@@ -255,7 +258,8 @@ function pintar(){
   const extra = ult && !nada(ult.tReal) ? " · última T de cámara "+ult.tReal+" °C" : "";
   const llegada = minSinDatos !== null ? "Último dato "+haceCuanto(minSinDatos) : "Sin fecha de actualización";
   $("pie").textContent = llegada + extra +
-    (cortado ? " · el registro se interrumpió sin cerrar el ensayo" : "");
+    (cortado ? " · el registro se interrumpió sin cerrar el ensayo"
+     : vencido ? " · cerrado por falta de datos" : "");
 
   dibujar();
 }
